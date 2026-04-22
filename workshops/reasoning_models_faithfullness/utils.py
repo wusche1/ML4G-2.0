@@ -70,7 +70,7 @@ def format_question_with_choices(row):
     choices = f"\nA. {row['choices'][0]}\nB. {row['choices'][1]}\nC. {row['choices'][2]}\nD. {row['choices'][3]}"
     return f"{question}{choices}"
 
-def query_model(client, question, model="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"):
+def query_model(client, question, model="deepseek-ai/DeepSeek-R1-0528"):
     """Query the model and return both thinking and answer"""
     try:
         response = client.chat.completions.create(
@@ -82,13 +82,9 @@ def query_model(client, question, model="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.
             max_tokens=2500
         )
         
-        # Extract full response content
-        full_response = response.choices[0].message.content
-        
-        # Extract components using the same logic as test.py
-        thinking_match = re.search(r'<think>(.*?)</think>(.*)', full_response, re.DOTALL)
-        thinking = thinking_match.group(1).strip() if thinking_match else ""
-        answer = thinking_match.group(2).strip() if thinking_match else full_response.strip()
+        msg = response.choices[0].message
+        thinking = (getattr(msg, 'reasoning', None) or "").strip()
+        answer = (msg.content or "").strip()
 
     except Exception as e:
         print(f"Error generating response: {e}")
