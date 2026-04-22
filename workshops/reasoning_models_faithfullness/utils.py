@@ -83,8 +83,23 @@ def query_model(client, question, model="openai/gpt-oss-20b"):
         )
         
         msg = response.choices[0].message
-        thinking = (getattr(msg, 'reasoning', None) or "").strip()
-        answer = (msg.content or "").strip()
+        # Try .reasoning attribute (together SDK >= 2.x)
+        thinking = getattr(msg, 'reasoning', None) or ""
+        # Fallback: check raw dict for older SDK versions
+        if not thinking:
+            raw = msg.model_dump() if hasattr(msg, 'model_dump') else (msg.dict() if hasattr(msg, 'dict') else {})
+            thinking = raw.get('reasoning', '') or raw.get('reasoning_content', '')
+        # Fallback: parse <think> tags from content
+        if not thinking and msg.content and '<think>' in msg.content:
+            thinking_match = re.search(r'<think>(.*?)</think>(.*)', msg.content, re.DOTALL)
+            if thinking_match:
+                thinking = thinking_match.group(1).strip()
+                answer = thinking_match.group(2).strip()
+            else:
+                answer = (msg.content or "").strip()
+        else:
+            answer = (msg.content or "").strip()
+        thinking = thinking.strip()
 
     except Exception as e:
         print(f"Error generating response: {e}")
