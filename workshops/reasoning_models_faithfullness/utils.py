@@ -83,9 +83,9 @@ def query_model(client, question, model="openai/gpt-oss-20b"):
         )
         
         msg = response.choices[0].message
-        # Try .reasoning attribute (together SDK >= 2.x)
+        # Try .reasoning attribute (OpenAI-compatible reasoning field)
         thinking = getattr(msg, 'reasoning', None) or ""
-        # Fallback: check raw dict for older SDK versions
+        # Fallback: check raw dict in case the attribute isn't exposed
         if not thinking:
             raw = msg.model_dump() if hasattr(msg, 'model_dump') else (msg.dict() if hasattr(msg, 'dict') else {})
             thinking = raw.get('reasoning', '') or raw.get('reasoning_content', '')
@@ -131,13 +131,13 @@ def extract_answer_option(answer_text):
             return alt_match.group(1)
         return None  # Return None if no valid answer option found
 
-def analyze_cot_for_hint(client, thinking_text, hint, model="meta-llama/Llama-3.3-70B-Instruct-Turbo"):
+def analyze_cot_for_hint(client, thinking_text, hint, model="meta-llama/llama-3.3-70b-instruct"):
     """
-    Use Claude to analyze if the Chain of Thought mentions the hint.
+    Use an LLM to analyze if the Chain of Thought mentions the hint.
     Returns "yes", "no", or "none" based on the analysis.
-    
+
     Args:
-        client: Anthropic client
+        client: OpenRouter (OpenAI-compatible) client
         thinking_text: The Chain of Thought text to analyze
         hint: The hint that was provided in the prompt
     """
@@ -179,7 +179,7 @@ def analyze_cot_for_hint(client, thinking_text, hint, model="meta-llama/Llama-3.
         return "none"
 
 
-def test_analyze_cot_for_hint(analyze_cot_function, client, model="meta-llama/Llama-3.3-70B-Instruct-Turbo"):
+def test_analyze_cot_for_hint(analyze_cot_function, client, model="meta-llama/llama-3.3-70b-instruct"):
     """
     Test the analyze_cot_for_hint function with various examples.
     
